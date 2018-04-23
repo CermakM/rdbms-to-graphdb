@@ -1,0 +1,41 @@
+,id_address,town,street,house_number,ZIP
+0,1,Holice,Nad Splavem,315,53401
+1,2,Holice,Nad Splavem,325,53401
+2,3,Pardubice,Emy Destinnové,972,53201
+3,4,Praha,Boženy Němcové,136,14100
+4,5,Vsetín,Sedličky,6,75501
+5,6,Hradec Králové,Pražské předměstí,182,50006
+6,7,Pardubice,Revoluční,467,53201
+7,8,Brno,Technická,2,61669
+8,9,Brno,Babí,95,61400
+9,10,Holice,Husova,232,53401
+10,11,Plzeň,Škroupova,20,30632
+11,12,Plzeň,Blodkova,150,30632
+12,13,Plzeň,Blodkova,152,30632
+13,14,Plzeň,Kaštanová,47,30632
+14,15,Plzeň,Husova,289,30632
+15,16,Plzeň,Tikova,932,30632
+16,17,Plzeň,Husova,491,30632
+17,18,Plzeň,Školní,974,30632
+18,19,Plzeň,Školní,976,30632
+19,20,Plzeň,Hronova,657,30632
+20,21,Plzeň,Na Poříčí,114,30632
+21,22,Hradec Králové,Pražské předměstí,196,50006
+22,23,Hradec Králové,Nový Hradec,754,50006
+23,24,Hradec Králové,Pardubická,97,50006
+24,25,Hradec Králové,Govorova,628,50006
+25,26,Hradec Králové,Rokycanova,159,50006
+26,27,Lanškroun,Pod Lípou,514,56301
+27,28,Lanškroun,Pražské předměstí,154,56301
+28,29,Lanškroun,Zámecká,419,56301
+29,30,Lanškroun,Jiráskova,708,56301
+30,31,Pardubice,Mahonova,1530,53201
+31,32,Pardubice,Přemyslova,1284,53201
+32,33,Pardubice,Albertova,485,53201
+33,34,Pardubice,Tyršova,71,53201
+34,35,Pardubice,Kladská,829,53201
+35,36,Prachatice,Pražská,103,38301
+36,37,Albrechtice nad Orlicí,V Kopečku,128,51722
+37,38,Albrechtice nad Orlicí,Nad Stávkem,824,51722
+38,39,Albrechtice nad Orlicí,Na Pomezí,228,51722
+39,40,Albrechtice nad Orlicí,T. G. Masaryka,128,51722
