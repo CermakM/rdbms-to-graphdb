@@ -5,6 +5,8 @@
 
 {zwsp} +
 
+//console
+
 == Section 1a: Inspecting a CSV
 
 {empty} +
@@ -27,7 +29,7 @@ This seems to be reasonable, let's do one more for the `meetings`. You can execu
 ----
 LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-graphdb/master/tables/meetings.csv" AS persons
 RETURN (persons)
-LIMIT 5 
+LIMIT 5
 ----
 //table
 
@@ -54,7 +56,7 @@ CREATE (:Person {
 person_id: toInt(persons.id_person),
 name: persons.name,
 surname: persons.surname,
-nickname: persons.nickname, 
+nickname: persons.nickname,
 birthdate: persons.birthdate,
 height: toInt(persons.height)
 })
@@ -255,7 +257,6 @@ LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-g
 MATCH (p)-[rel:HAS_RELATIONSHIP {relationship_id: toInt(relationship_types.id_type_of_relationship)}]->(c)
 SET rel.type = relationship_types.name
 ----
-//graph
 
 == Section 4: Queries
 
@@ -275,7 +276,6 @@ For example, let's match all the persons with the name `"Radek"`. And check the 
 MATCH (p:Person {name: "Radek"})-[r]->(node)
 RETURN p, r, node;
 ----
-//graph
 
 {empty} +
 
@@ -285,7 +285,6 @@ RETURN p, r, node;
 ----
 MATCH p=()-[r:HAS_RELATIONSHIP]->() RETURN p, r LIMIT 5
 ----
-//graph
 
 Match only those relationships, which have a type defined.
 
@@ -296,7 +295,6 @@ WHERE r.type IS NOT NULL
 RETURN p, r
 LIMIT 10
 ----
-//graph
 
 {empty} +
 
@@ -306,9 +304,9 @@ We can also order the meetings by the date, so that the nearest date is listed f
 
 [source,cypher]
 ----
-MATCH p=()-[r:HAS_MEETING]->()
+MATCH (p:Person)-[r:HAS_MEETING]->(nodes)
+RETURN p, nodes
 ORDER BY p.date
-RETURN p
 LIMIT 5
 ----
 //table
@@ -322,10 +320,9 @@ Find people that are from Brno and display all their relationships.
 [source,cypher]
 ----
 MATCH (p:Person)-[:HAS_ADDRESS]->(a:Address {town: "Brno"})
-MATCH p-[r]-(node)
+MATCH (p)-[r]-(node)
 RETURN p, r, node;
 ----
-//graph
 
 {empty} +
 
