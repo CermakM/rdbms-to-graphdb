@@ -1,14 +1,15 @@
 = neo4j GraphDB
+:neo4j-version: 3.3.5
+:author: Marek Cermak <macermak@redhat.com>
+:style: #54A835/#1078B5/white:Colorized(name)
 
 {zwsp} +
 
-== Section 1: Importing from CSV
----
+== Section 1a: Inspecting a CSV
 
 {empty} +
 
-Inspecting nodes
-^^^^^^^^^^^^^^^^
+=== Inspecting nodes
 As we did in Python in the link:rdbms_with_python.ipynb[RDBMS example], we can firstly just inspect the tables (we will call the entities `nodes` from now on). For that, we will open an empty database, load the CSV file and inspect the nodes. +
 For example, for the `persons` table, we can do this by issueing the following query. We will limit the content to 5 entries for clarity.
 
@@ -30,15 +31,19 @@ LIMIT 5
 ----
 //table
 
+== Section 1b: Importing from the CSV
 
-Creating the graph
-^^^^^^^^^^^^^^^^^^
+{empty} +
+
+=== The Graph DB property model
 
 Lets start to create the graph according to our model.
 
 image::https://github.com/CermakM/rdbms-to-graphdb/blob/master/graph_db_property_model.png?raw=true[GraphDB Property Model]
 
 {empty} +
+
+=== Creating the graph
 
 //setup
 //output
@@ -70,6 +75,7 @@ Lets repeat the procedure for the rest of the nodes.
 
 //setup
 //hide
+.adresses
 [source,cypher]
 ----
 LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-graphdb/master/tables/addresses.csv" AS addresses
@@ -80,13 +86,25 @@ street: addresses.street,
 house_number: toInt(addresses.house_number),
 zip: toInt(addresses.ZIP)
 });
+----
 
+//setup
+//hide
+.contacts
+[source,cypher]
+----
 LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-graphdb/master/tables/contacts.csv" AS contacts
 CREATE (:Contact {
 contact_id: toInt(contacts.id_contact),
 contact: contacts.contact
 });
+----
 
+//setup
+//hide
+.meetings
+[source,cypher]
+----
 LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-graphdb/master/tables/meetings.csv" AS meetings
 CREATE (:Meeting {
 meeting_id: toInt(meetings.id_meeting),
@@ -112,28 +130,207 @@ Let's fix it.
 
 == Section 2: Creating Indexes
 
-Indexes, similarly to RDBMS, provide faster lookup. Since we're done with adding nodes, we can create indexes on the nodes to ensre their quick lookup when creating relationships in the next step. 
+{empty} +
+
+Indexes, similarly to RDBMS, provide faster lookup. Since we're done with adding nodes, we can create indexes on the nodes to ensre their quick lookup when creating relationships in the next step.
+
+Unfortunately, the queries can only contain one statement at the time and the `CREATE INDEX` statement can not be chained, so we need to split these into multiple statements.
 
 [source,cypher]
 ----
 CREATE INDEX ON :Person(person_id);
+----
+
+[source,cypher]
+----
 CREATE INDEX ON :Address(address_id);
+----
+
+[source,cypher]
+----
 CREATE INDEX ON :Contact(contact_id);
+----
+
+[source,cypher]
+----
 CREATE INDEX ON :Meeting(meeting_id);
 ----
 
 
 == Section 3: Adding Relations
----
 
-Now we can proceed to adding relationships. Let's start with the easier ones - the relationships without properties - like `HAS_ADDRESS`. I know, the relationship name could have been more creative, but it serves the purpose.
+{empty} +
+
+Now we can proceed to adding relationships. In the context of GraphDB, we call them `edges`. Let's start with the easier ones - the relationships without properties - like `HAS_ADDRESS`. I know, the relationship name could have been more creative, but it serves the purpose.
 
 Let's load the `persons.csv` once again, since we ignored the `id_address` property at that time.
 
+//setup
 [source,cypher]
 ----
 LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-graphdb/master/tables/persons.csv" AS persons
 MATCH (a:Address {address_id: toInt(persons.id_address)})
 MATCH (p:Person {person_id: toInt(persons.id_person)})
-MERGE (p)-[:HAS_ADDRESS]->(a)
+MERGE (p)-[:HAS_ADDRESS]->(a);
 ----
+//graph
+
+
+Now we can query only those persons, which have an address assigned.
+
+
+[source,cypher]
+----
+MATCH (p:Person)-[:HAS_ADDRESS]->(a:Address)
+RETURN p, a;
+----
+//graph
+
+
+Lets create the the meeting edges in the similar manner.
+
+//setup
+//hide
+[source,cypher]
+----
+LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-graphdb/master/tables/persons_meetings.csv" AS meetings
+MATCH (m:Meeting {meeting_id: toInt(meetings.id_meeting)})
+MATCH (p:Person {person_id: toInt(meetings.id_person)})
+MERGE (p)-[:HAS_MEETING]->(m);
+----
+
+{empty} +
+
+=== Edges with properties
+
+In a Graph DB, the relations (edges) can also have their own properties. We'll make use of that when creating the `HAS_RELATIONSHIP` and `HAS_CONTACT` edges.
+
+//setup
+//hide
+.Contact
+[source,cypher]
+----
+USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-graphdb/master/tables/contacts.csv" AS contacts
+MATCH (p:Person {person_id: toInt(contacts.id_person)})
+MATCH (c:Contact {contact_id: toInt(contacts.id_contact)})
+MERGE (p)-[rel:HAS_CONTACT]->(c)
+ON CREATE SET rel.contact_type_id = toInt(contacts.id_type_of_contact)
+----
+
+Now lets add the properties to the created `HAS_CONTACT` edges.
+
+//setup
+//hide
+.Type of contact - Edge Property
+[source,cypher]
+----
+LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-graphdb/master/tables/types_of_contacts.csv" AS types_of_contacts
+MATCH (p)-[rel:HAS_CONTACT {contact_type_id: types_of_contacts.id_type_of_contact}]->(c)
+SET rel.type = types_of_contacts.name
+----
+//graph
+
+//setup
+//hide
+.Relationship
+[source,cypher]
+----
+USING PERIODIC COMMIT
+LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-graphdb/master/tables/relationships.csv" AS relationships
+MATCH (p1:Person {person_id: toInt(relationships.id_person1)})
+MATCH (p2:Person {person_id: toInt(relationships.id_person2)})
+MERGE (p1)-[rel:HAS_RELATIONSHIP]->(p2)
+ON CREATE SET rel.relationship_id = toInt(relationships.id_relationship)
+----
+
+As before, add the properties to the created `HAS_RELATIONSHIP` edges.
+
+//setup
+//hide
+.Types of Relationship
+[source,cypher]
+----
+LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-graphdb/master/tables/types_of_relationships.csv" AS relationship_types
+MATCH (p)-[rel:HAS_RELATIONSHIP {relationship_id: toInt(relationship_types.id_type_of_relationship)}]->(c)
+SET rel.type = relationship_types.name
+----
+//graph
+
+== Section 4: Queries
+
+{empty} +
+
+Now that we have both nodes and relationships set up, let's take a look at few simple queries.
+NOTE: We will limit the number of results here for more clarity, so don't be surprised if there is a content 'missing'.
+
+{empty} +
+
+=== Inspecting persons
+
+For example, let's match all the persons with the name `"Radek"`. And check the relationships that connect them.
+
+[source,cypher]
+----
+MATCH (p:Person {name: "Radek"})-[r]->(node)
+RETURN p, r, node;
+----
+//graph
+
+{empty} +
+
+=== Inspecting relationships
+
+[source,cypher]
+----
+MATCH p=()-[r:HAS_RELATIONSHIP]->() RETURN p, r LIMIT 5
+----
+//graph
+
+Match only those relationships, which have a type defined.
+
+[source,cypher]
+----
+MATCH p=()-[r:HAS_RELATIONSHIP]->()
+WHERE r.type IS NOT NULL
+RETURN p, r
+LIMIT 10
+----
+//graph
+
+{empty} +
+
+=== Inspecting meetings
+
+We can also order the meetings by the date, so that the nearest date is listed first.
+
+[source,cypher]
+----
+MATCH p=()-[r:HAS_MEETING]->()
+ORDER BY p.date
+RETURN p
+LIMIT 5
+----
+//table
+
+{empty} +
+
+=== Inspecting addresses
+
+Find people that are from Brno and display all their relationships.
+
+[source,cypher]
+----
+MATCH (p:Person)-[:HAS_ADDRESS]->(a:Address {town: "Brno"})
+MATCH p-[r]-(node)
+RETURN p, r, node;
+----
+//graph
+
+{empty} +
+
+== What Next
+
+Feel free to export other possibilities that CQL and neo4j provide!
+
+Take a look at link:https://neo4j.com/[neo4j] to learn more or take link:https://neo4j.com/developer/cypher-query-language/[Intro to Cypher].
