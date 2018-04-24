@@ -1,0 +1,139 @@
+= neo4j GraphDB
+
+{zwsp} +
+
+== Section 1: Importing from CSV
+---
+
+{empty} +
+
+Inspecting nodes
+^^^^^^^^^^^^^^^^
+As we did in Python in the link:rdbms_with_python.ipynb[RDBMS example], we can firstly just inspect the tables (we will call the entities `nodes` from now on). For that, we will open an empty database, load the CSV file and inspect the nodes. +
+For example, for the `persons` table, we can do this by issueing the following query. We will limit the content to 5 entries for clarity.
+
+[source,cypher]
+----
+LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-graphdb/master/tables/persons.csv" AS persons
+RETURN (persons)
+LIMIT 5
+----
+//table
+
+This seems to be reasonable, let's do one more for the `meetings`. You can execute it yourself, if you wish.
+
+[source,cypher]
+----
+LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-graphdb/master/tables/meetings.csv" AS persons
+RETURN (persons)
+LIMIT 5 
+----
+//table
+
+
+Creating the graph
+^^^^^^^^^^^^^^^^^^
+
+Lets start to create the graph according to our model.
+
+image::https://github.com/CermakM/rdbms-to-graphdb/blob/master/graph_db_property_model.png?raw=true[GraphDB Property Model]
+
+{empty} +
+
+//setup
+//output
+[source,cypher]
+----
+LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-graphdb/master/tables/persons.csv" AS persons
+CREATE (:Person {
+person_id: toInt(persons.id_person),
+name: persons.name,
+surname: persons.surname,
+nickname: persons.nickname, 
+birthdate: persons.birthdate,
+height: toInt(persons.height)
+})
+----
+
+
+We can now visualize the `Person` nodes that are present in the database by running the following query.
+
+[source,cypher]
+----
+MATCH (p:Person)
+RETURN p;
+----
+//graph
+
+
+Lets repeat the procedure for the rest of the nodes.
+
+//setup
+//hide
+[source,cypher]
+----
+LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-graphdb/master/tables/addresses.csv" AS addresses
+CREATE (:Address {
+address_id: toInt(addresses.id_address),
+town: addresses.town,
+street: addresses.street,
+house_number: toInt(addresses.house_number),
+zip: toInt(addresses.ZIP)
+});
+
+LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-graphdb/master/tables/contacts.csv" AS contacts
+CREATE (:Contact {
+contact_id: toInt(contacts.id_contact),
+contact: contacts.contact
+});
+
+LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-graphdb/master/tables/meetings.csv" AS meetings
+CREATE (:Meeting {
+meeting_id: toInt(meetings.id_meeting),
+date: meetings.date,
+location: meetings.location,
+note: meetings.note
+});
+----
+
+
+Now we can visualize all the nodes that are present in the graph.
+
+[source,cypher]
+----
+MATCH (n)
+RETURN n;
+----
+//graph
+
+
+We can see that it is a mess right now now. There are no relations among the nodes.
+Let's fix it.
+
+== Section 2: Creating Indexes
+
+Indexes, similarly to RDBMS, provide faster lookup. Since we're done with adding nodes, we can create indexes on the nodes to ensre their quick lookup when creating relationships in the next step. 
+
+[source,cypher]
+----
+CREATE INDEX ON :Person(person_id);
+CREATE INDEX ON :Address(address_id);
+CREATE INDEX ON :Contact(contact_id);
+CREATE INDEX ON :Meeting(meeting_id);
+----
+
+
+== Section 3: Adding Relations
+---
+
+Now we can proceed to adding relationships. Let's start with the easier ones - the relationships without properties - like `HAS_ADDRESS`. I know, the relationship name could have been more creative, but it serves the purpose.
+
+Let's load the `persons.csv` once again, since we ignored the `id_address` property at that time.
+
+[source,cypher]
+----
+LOAD CSV WITH HEADERS FROM "https://raw.githubusercontent.com/CermakM/rdbms-to-graphdb/master/tables/persons.csv" AS persons
+MATCH (a:Address {address_id: toInt(persons.id_address)})
+MATCH (p:Person {person_id: toInt(persons.id_person)})
+MERGE (p)-[:HAS_ADDRESS]->(a)
+----
